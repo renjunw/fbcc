@@ -10,7 +10,7 @@ clean:
 FBCC_OBJS = fblist.o fbgen.o fbtype.o fbconst.o fberror.o fbsym.o fbparse.o fileops.o fbas.o fbcc.o
 
 fbcc: $(FBCC_OBJS)
-	riscv32-unknown-linux-gnu-gcc $(FBCC_OBJS) $(LFLAGS) -o fbcc $(LIBS)
+	riscv32-unknown-linux-gnu-gcc -static $(FBCC_OBJS) $(LFLAGS) -o fbcc $(LIBS)
 
 fbsym.o: fbsym.c fbcc.h
 
@@ -29,6 +29,7 @@ fbparse.c: fbcc_lex.yy.c fbparse.y fbcc.h
 	bison -o fbparse.c fbparse.y
 
 fileops.o: fileops.c compiler.h config.h 
+	riscv32-unknown-linux-gnu-gcc -c $(CFLAGS) fileops.c -o fileops.o
 
 .c.o:
 	riscv32-unknown-linux-gnu-gcc $(CFLAGS) -c $*.c

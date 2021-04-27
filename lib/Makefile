@@ -15,5 +15,5 @@ clean:
 	rm -f *.s *.i *~
 
 .c.s:
-	gcc -E -I$(FBINCLUDE) $*.c >$*.i
+	riscv32-unknown-linux-gnu-gcc -E -I$(FBINCLUDE) $*.c >$*.i
 	$(FBCC) < $*.i > $*.s

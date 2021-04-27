@@ -260,8 +260,8 @@ const char cc_lib_str[] =
 FILE *ccout  = NULL;
 FILE *ccin = NULL;
 
-extern void yyset_in  (FILE * in_str  );
-extern void yyset_out  (FILE * out_str  );
+extern void yyset_in  (FILE * in_str);
+extern void yyset_out  (FILE * out_str);
 
 
 /*only used in local fbcc.c file*/
@@ -279,7 +279,6 @@ __ExternC int as_hexdump(char *input, char *output)
         fprintf(stderr, "Cannot create file %s\r\n", output);
         return ERR_OPENFILE;
     }
-
 
     for(i = 0; i < size; i++)
     {
@@ -316,7 +315,7 @@ int main(int argc,char *argv[])
     char* asfile = argv[2];
     char* ecb = argv[3];
     char* hex = argv[4];
-    unsigned stack_size = 1024; //use default value.
+    unsigned stack_size = 64 * 1024; //use default value.
 
     //printf(cc_lib_str);
 
@@ -335,13 +334,13 @@ int main(int argc,char *argv[])
         return ERR_ARGUMENT;
     }
 
-    ret = fwrite(cc_lib_str, 1, strlen(cc_lib_str), ccout);
+    /*ret = fwrite(cc_lib_str, 1, strlen(cc_lib_str), ccout);
 
     if(ret != (int)strlen(cc_lib_str) || ferror(ccout))
     {
         fprintf(stderr, "cannot write file %s\r\n", asfile);
         return ERR_IO;
-    }
+    }*/
 
     line_current=1;
     block_current=NULL;
@@ -352,6 +351,8 @@ int main(int argc,char *argv[])
     yyset_in(ccin);
     yyset_out(ccout);
 
+    //printf("/* Module startup */\n");
+    //printf(".module\n\n");
     yyparse(); 
 
     /*	 printf("\n");
@@ -369,9 +370,8 @@ int main(int argc,char *argv[])
     }
 
     //as_assembler(asfile, ecb, stack_size, 0);
+    //as_hexdump(ecb, hex);
 
-
-    as_hexdump(ecb, hex);
     return 0;
 }
 
