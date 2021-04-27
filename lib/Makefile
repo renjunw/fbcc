@@ -3,12 +3,7 @@ FBAS = ../fbas/fbas
 FBINCLUDE = .
 FBLIBS = startup.ss fblib.s
 
-all: fblib.s getopt.s
-
-#
-# getopt.c
-#
-getopt.s: getopt.c
+all: fblib.s
 
 #
 # stdlib

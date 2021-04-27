@@ -1,13 +1,13 @@
 .module
  
 .text
-/* on reprend les variables globales */
+/* global variable */
   li_i _vars
 	li_i _getvars
 	jsr 4
 	pop
 	
-/* lancement de 'main' puis 'exit' */
+/* Start 'main' and exit */
 	li_i _argv
 	ld_i
 	li_i _argc
