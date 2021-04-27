@@ -119,6 +119,7 @@
 
 #include "fbvmspec.h"
 #include "fbvminstr.h"
+#include "compiler.h"
 
 /* parsing */
 
@@ -1797,82 +1798,6 @@ yyreturn:
 
 //#include "fbas_lex.yy.c"
 /***********content of fbas_lex.yy.c start************************************/
-
-
-char *vm_instr_str[]=
-{
-    "zero",
-    "ld_b", 
-    "ld_ub",
-    "ld_w",
-    "ld_uw",
-    "ld_i",
-
-    "st_b",
-    "st_w",
-    "st_i",
-
-    "add_i",
-    "sub_i",
-    "mul_i",
-    "div_i",
-    "div_ui",
-    "mod_i",
-    "mod_ui",
-    "neg_i",
-
-    "cmplt_i",
-    "cmple_i",
-    "cmpge_i",
-    "cmpgt_i",
-    "cmpeq_i",
-    "cmpne_i",
-
-    "cmplt_ui",
-    "cmple_ui",
-    "cmpge_ui",
-    "cmpgt_ui",
-
-    "and_i",
-    "or_i",
-    "xor_i",
-    "not_i",
-    "shl_i",
-    "shr_i",
-    "shr_ui",
-
-    /* conversions */
-    "cvt_i_b",
-    "cvt_i_ub",
-    "cvt_i_w",
-    "cvt_i_uw",
-
-    "cvt_b_i",
-    "cvt_w_i",
-
-
-    "li_i",
-    "libp_i",
-
-
-    "jeq_i",
-    "jne_i",
-    "switch_i",
-
-    "jmp",
-
-
-    "jsr",
-    "rts",
-
-
-    "dup",
-    "pop",
-    "addsp",
-
-    "libcall",
-    NULL,
-};
 
 
 #define  YY_INT_ALIGNED short int
@@ -4397,47 +4322,67 @@ void print_help(void)
 					);
 }
 
+__ExternC int as_assembler(char *input, char *output, int stack_size, int verbose)
+{
+    FILE* asm_fin = NULL;
+
+    Seg_Init();
+    Hash_Init();
+    asm_fin = fopen(input, "rb");
+
+    if(!asm_fin)
+    {
+        fprintf(stderr, "cannot open file %s\r\n", input);
+        return -1;
+    }
+
+    lex_linenum=1;
+
+    yyset_in(asm_fin);
+
+    yyparse();
+
+    if (verbose) Seg_Verbose();
+
+    Seg_ExecWrite(output, stack_size);
+
+    return 0;
+}
+
+/*
+ *
+ */
+
+/*
 int main(int argc, char *argv[])
 {
-	 int c;
-	 char obj_filename[PATH_SIZE];
-	 int verbose,stack_size;
-	 
-	 strcpy(obj_filename, "fba.out");
-	 verbose=0;
-	 stack_size=64 * 1024;
-	 
-	 while (1) {
-			c=getopt(argc,argv,"h?vo:s:");
-			if (c==-1) break;
-			switch (c) {
-			 case 'h':
-			 case '?':
-				 print_help();
-				 exit(0);
-				 break;
-			 case 'o':
-				 strcpy(obj_filename, optarg);
-				 break;
-			 case 'v':
-				 verbose=1;
-				 break;
-			 case 's':
-				 stack_size=atoi(optarg);
-				 break;
-			}
-	 }
+    FILE* asm_fin = NULL;
+    char* input = argv[1];
+    char* output = argv[2];
+    int verbose = 0;
+    int stack_size = 64 * 1024;
 
-	 Seg_Init();
-	 Hash_Init();
-	 
-	 lex_linenum=1;
-	 yyparse();
-	 
-	 if (verbose) Seg_Verbose();
-	 
-	 Seg_ExecWrite(obj_filename, stack_size);
+	Seg_Init();
+	Hash_Init();
+    asm_fin = fopen(input, "rb");
+    if(!asm_fin)
+    {
+        fprintf(stderr, "cannot open file %s\r\n", input);
+        return -1;
+    }
 
-	 return 0;
+    lex_linenum=1;
+
+    yyset_in(asm_fin);
+
+    yyparse();
+
+    if (verbose) Seg_Verbose();
+
+    Seg_ExecWrite(output, stack_size);
+    
+    (void)fclose(asm_fin);
+    return 0;
 }
+*/
 
