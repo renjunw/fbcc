@@ -1,2 +1,0 @@
-#! /bin/sh
-exec hexdump -e '"%06_ax " 16/1 "%02X " "\n"' $*
