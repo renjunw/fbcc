@@ -1,8 +1,11 @@
 # FBCC: Fabrice Bellard's C Compiler
 
+FBCC can running on qemu-riscv32
+
 This is a modified copy of Fabrice Bellard's C compiler which is available
-at [https://bellard.org/fbcc/](https://bellard.org/fbcc/). All I've
-done is fix it up so that it runs on Ubuntu 18.04 LTS.
+at [https://bellard.org/fbcc/](https://bellard.org/fbcc/). 
+
+All I've done is fix it up so that it runs on Ubuntu 18.04 LTS.
 
 The compiler no longer compiles itself because of the interesting
 type definitions in the headers of current `flex` and/or `bison`.
