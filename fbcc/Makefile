@@ -33,10 +33,6 @@ fileops.o: fileops.o compiler.h config.h
 .c.o:
 	riscv32-unknown-linux-gnu-gcc $(CFLAGS) -c $*.c
 
-fbas.o: fbas.y fbas_lex.yy.c
-	bison -l --name-prefix=as_yy -o fbas.c fbas.y
+fbas.o: fbas.c
 	riscv32-unknown-linux-gnu-gcc -c $(CFLAGS) fbas.c -o fbas.o
-
-fbas_lex.yy.c: fbas_lex.l
-	flex -L -o fbas_lex.yy.c fbas_lex.l
 
