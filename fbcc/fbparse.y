@@ -786,7 +786,7 @@ liste_de_constantes_chaines:
 
 %%
 
-#include "lex.yy.c"
+#include "fbcc_lex.yy.c"
 
 int enum_val;
 		 

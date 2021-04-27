@@ -26,33 +26,35 @@
  * table of symbols
  */
 
-#include <fbvmspec.h>
+#ifndef __FBCC_H
+#define __FBCC_H
 
 
 extern char *tag_str[];
 
 enum {
-	   LIST_LIST=1,
-		 LIST_INT,
-		 LIST_STR,
-		 LIST_TAG,
-		 LIST_SYM,
+    LIST_LIST=1,
+    LIST_INT,
+    LIST_STR,
+    LIST_TAG,
+    LIST_SYM,
 };
 
 typedef struct _LIST {
-	 int type;
-	 struct _LIST *tl;
-	 union {
-			struct _LIST *list;
-			int val;
-			int buf_size;
-			struct _SYM *sym;
-	 } data;
-	 char str[1];
+    int type;
+    struct _LIST *tl;
+    union {
+        struct _LIST *list;
+        int val;
+        int buf_size;
+        struct _SYM *sym;
+    } data;
+    char str[1];
 } LIST;
 
 typedef LIST *PLIST;
 
+/*fblist.c*/
 LIST *mk_int(int a,LIST *tl);
 LIST *mk_tag(int a,LIST *tl);
 LIST *mk_buf(char *buf,int buf_size,LIST *tl);
@@ -91,49 +93,49 @@ void DeclareVars(LIST *spec,LIST *decl);
 #define SYM_LENMAX 64
 
 enum {
-	   TABLE_VAR=1,    /* table des symboles pour les variables */
-		 TABLE_LABEL,    /* labels pour goto */
-		 TABLE_STRUCT,   /* structures/unions/enums */
+    TABLE_VAR=1,    
+    TABLE_LABEL,   
+    TABLE_STRUCT,  
 };
 
 typedef struct _SYM {
-	 char str[SYM_LENMAX];
-	 int sym_table;
+    char str[SYM_LENMAX];
+    int sym_table;
 
-	 struct _SYM *block_next;
-	 struct _SYM *hash_next;
-	 struct _SYM **hash_prev;
-	 struct _BLOCK *block;
+    struct _SYM *block_next;
+    struct _SYM *hash_next;
+    struct _SYM **hash_prev;
+    struct _BLOCK *block;
 
-	 struct _LIST *list;
+    struct _LIST *list;
 } SYM;
 
 
 enum {
-	   BLOCK_WHILE=1,
-		 BLOCK_SWITCH,
-		 BLOCK_IF,
-		 BLOCK_DECL,
-		 BLOCK_GLOBAL,
+    BLOCK_WHILE=1,
+    BLOCK_SWITCH,
+    BLOCK_IF,
+    BLOCK_DECL,
+    BLOCK_GLOBAL,
 };
 
 typedef struct _BLOCK {
-	 int type;
-   int label_break;
-	 int label_continue;
-	 int label_restart;     /* pour le début des boucles 'do' et 'for' */
-	 
-	 LIST *switch_values;
+    int type;
+    int label_break;
+    int label_continue;
+    int label_restart;    
 
-	 int local_var_offset;
-	 struct _SYM *sym_first;
-	 struct _BLOCK *dad;
+    LIST *switch_values;
+
+    int local_var_offset;
+    struct _SYM *sym_first;
+    struct _BLOCK *dad;
 } BLOCK;
 
 extern BLOCK *block_global;
 extern BLOCK *block_function; 
-extern BLOCK *block_current;  /* bloc courant */
-extern BLOCK *block_decl;     /* bloc courant pour les déclarations */
+extern BLOCK *block_current;  
+extern BLOCK *block_decl;     
 
 void Sym_Init(void);
 void Sym_Print(void);
@@ -155,7 +157,6 @@ void Block_Leave(void);
 extern int line_current;
 void Error_Internal(char *format,...);
 void Error(char *format,...);
-void ddprintf(char *format,...);
 void Warning(char *format,...);
 
 /* fbtype.c */
@@ -200,106 +201,100 @@ void Gen_Instr(LIST *instr);
 
 void Gen_Int(unsigned int c);
 
-
-
-
-
 /* fblist.c */
-
 enum {
-		 TYPE_VOID=1,
-		 TYPE_CHAR,
-		 TYPE_UCHAR,
-		 TYPE_SHORT,
-		 TYPE_USHORT,
-	   TYPE_INT,
-		 TYPE_UINT,
-		 TYPE_POINTER,
-		 
-		 
-		 TYPE_FUNC,
-		 TYPE_ARRAY,
-		 TYPE_STRUCT,
-		 TYPE_UNION,
-		 TYPE_ENUM,
-		 TYPE_TYPEDEF,
-		 
-		 QUALIF_CONST,
-		 QUALIF_VOLATILE,
+    TYPE_VOID=1,
+    TYPE_CHAR,
+    TYPE_UCHAR,
+    TYPE_SHORT,
+    TYPE_USHORT,
+    TYPE_INT,
+    TYPE_UINT,
+    TYPE_POINTER,
 
-		 TYPE_VAR_IDENT,
-		 TYPE_TYPEDEF_IDENT,
-		 TYPE_UNSIGNED,
-		 TYPE_SIGNED,
-		 
-		 STORAGE_AUTO,
-		 STORAGE_REGISTER,
-		 STORAGE_STATIC,
-		 STORAGE_EXTERN,
-		 STORAGE_TYPEDEF,
-		 STORAGE_DEFAULT,
-		 
-		 SYM_VAR,
-		 SYM_TYPEDEF,
-		 SYM_STRUCT,
-		 SYM_UNION,
-		 SYM_ENUM,
-		 SYM_ENUM_CONST,
 
-		 VAR_STACK,
-		 VAR_DATA,
-		 VAR_CODE,
-		 
-		 FUNC_NEW,
-		 FUNC_ELLIPSIS,
-		 FUNC_OLD,
+    TYPE_FUNC,
+    TYPE_ARRAY,
+    TYPE_STRUCT,
+    TYPE_UNION,
+    TYPE_ENUM,
+    TYPE_TYPEDEF,
 
-		 EXPR_INT,
-		 EXPR_STR,
+    QUALIF_CONST,
+    QUALIF_VOLATILE,
 
-		 EXPR_IDENT,
-		 EXPR_CAST,
-		 
-		 EXPR_CALL,
-		 EXPR_INDIR,
-		 EXPR_ADDR,
-		 EXPR_ASSIGN,
+    TYPE_VAR_IDENT,
+    TYPE_TYPEDEF_IDENT,
+    TYPE_UNSIGNED,
+    TYPE_SIGNED,
 
-		 EXPR_ADD,
-		 EXPR_SUB,
-		 EXPR_MUL,
-		 EXPR_DIV,
-		 EXPR_MOD,
-		 EXPR_NEG,
-		 EXPR_PLUS,
-		 
-		 EXPR_AND,
-		 EXPR_OR,
-		 EXPR_XOR,
-		 EXPR_NOT,
-		 EXPR_SHR,
-		 EXPR_SHL,
-		 
-		 EXPR_LT,
-		 EXPR_LE,
-		 EXPR_EQ,
-		 EXPR_GE,
-		 EXPR_GT,
-		 EXPR_NE,
-		 
-		 EXPR_LAND,
-		 EXPR_LOR,
-		 EXPR_LNOT,
+    STORAGE_AUTO,
+    STORAGE_REGISTER,
+    STORAGE_STATIC,
+    STORAGE_EXTERN,
+    STORAGE_TYPEDEF,
+    STORAGE_DEFAULT,
 
-		 EXPR_LIST,
-		 EXPR_COND,
+    SYM_VAR,
+    SYM_TYPEDEF,
+    SYM_STRUCT,
+    SYM_UNION,
+    SYM_ENUM,
+    SYM_ENUM_CONST,
 
-		 INIT_EXPR,
-		 INIT_LIST,
+    VAR_STACK,
+    VAR_DATA,
+    VAR_CODE,
+
+    FUNC_NEW,
+    FUNC_ELLIPSIS,
+    FUNC_OLD,
+
+    EXPR_INT,
+    EXPR_STR,
+
+    EXPR_IDENT,
+    EXPR_CAST,
+
+    EXPR_CALL,
+    EXPR_INDIR,
+    EXPR_ADDR,
+    EXPR_ASSIGN,
+
+    EXPR_ADD,
+    EXPR_SUB,
+    EXPR_MUL,
+    EXPR_DIV,
+    EXPR_MOD,
+    EXPR_NEG,
+    EXPR_PLUS,
+
+    EXPR_AND,
+    EXPR_OR,
+    EXPR_XOR,
+    EXPR_NOT,
+    EXPR_SHR,
+    EXPR_SHL,
+
+    EXPR_LT,
+    EXPR_LE,
+    EXPR_EQ,
+    EXPR_GE,
+    EXPR_GT,
+    EXPR_NE,
+
+    EXPR_LAND,
+    EXPR_LOR,
+    EXPR_LNOT,
+
+    EXPR_LIST,
+    EXPR_COND,
+
+    INIT_EXPR,
+    INIT_LIST,
 };
 
 /* lexer - parser */
-
 #define STRING_SIZE_MAX 256
 
 extern char lex_string[STRING_SIZE_MAX];
@@ -313,14 +308,12 @@ void Lex_AddString(int c);
 int Lex_CharEsc(char *str);
 
 
-/* génération de code */
-
 extern int enum_val;
 
-/* numéro de référence pour les variables globales */
+
 extern int global_var_num;
 
-/* allocation des variables locales */
+
 extern int local_var_size;
 extern SYM *local_var_sym;
 
@@ -354,3 +347,6 @@ void Gen_InstrIfElse3(void);
 LIST *Expr_ConstEval(LIST *expr);
 
 extern int debug_print_expr;
+
+
+#endif //__FBCC_H

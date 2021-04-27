@@ -34,59 +34,50 @@ int line_current;
 
 void Error(char *format,...)
 {
-	 va_list ap;
-	 
-	 errors_nb++;
-	 fprintf(stderr,"Error #%d line %d: ",errors_nb,line_current);
-	 
-	 va_start(ap,format);
-	 vfprintf(stderr,format,ap);
-	 va_end(ap);
-	 
-	 fprintf(stderr,"\n");
-	 exit(1);
+    va_list ap;
+
+    errors_nb++;
+    fprintf(stderr,"Error #%d line %d: ",errors_nb,line_current);
+
+    va_start(ap,format);
+    vfprintf(stderr,format,ap);
+    va_end(ap);
+
+    fprintf(stderr,"\n");
+    exit(1);
 }
 
 void Warning(char *format,...)
 {
-	 va_list ap;
-	 
-	 errors_nb++;
-	 fprintf(stderr,"Warning line %d: ",line_current);
-	 
-	 va_start(ap,format);
-	 vfprintf(stderr,format,ap);
-	 va_end(ap);
-	 
-	 fprintf(stderr,"\n");
+    va_list ap;
+
+    errors_nb++;
+    fprintf(stderr,"Warning line %d: ",line_current);
+
+    va_start(ap,format);
+    vfprintf(stderr,format,ap);
+    va_end(ap);
+
+    fprintf(stderr,"\n");
 }
 
 
 void yyerror(char *str)
 {
-	 Error(str);
+    Error(str);
 }
 
 void Error_Internal(char *format,...)
 {
-	 va_list ap;
+    va_list ap;
 
-	 fprintf(stderr,"Internal error line %d: ",line_current);
+    fprintf(stderr,"Internal error line %d: ",line_current);
 
-	 va_start(ap,format);
-	 vfprintf(stderr,format,ap);
-	 va_end(ap);
-	 
-	 fprintf(stderr,"\n");
-	 exit(1);
+    va_start(ap,format);
+    vfprintf(stderr,format,ap);
+    va_end(ap);
+
+    fprintf(stderr,"\n");
+    exit(1);
 }
 
-void ddprintf(char *format,...)
-{
-	 va_list ap;
-	 
-	 va_start(ap,format);
-	 vfprintf(stderr,format,ap);
-	 va_end(ap);
-
-}
