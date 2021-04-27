@@ -1,15 +1,16 @@
-OBJS = fblist.o fbgen.o fbtype.o fbconst.o fberror.o fbsym.o fbparse.o fbcc.o
-CFLAGS = -m32 -g -Wall -O2 -I../fbvm
+CFLAGS = -static -g -Wall -O2 
 LIBS =
-LFLAGS	= -m32
+LFLAGS	= 
 
 all: fbcc
 
 clean:
-	rm -f *.o *.i *.s *~ fbcc fbfbcc fbfbcc1 lex.yy.c fbparse.c
+	rm -f *.o *.i *.s *~ fbcc fbcc_lex.yy.c fbparse.c fbas.c fbas_lex.yy.c fbas
 
-fbcc: $(OBJS)
-	gcc -g $(OBJS) $(LFLAGS) -o fbcc $(LIBS)
+FBCC_OBJS = fblist.o fbgen.o fbtype.o fbconst.o fberror.o fbsym.o fbparse.o fileops.o fbas.o fbcc.o
+
+fbcc: $(FBCC_OBJS)
+	riscv32-unknown-linux-gnu-gcc $(FBCC_OBJS) $(LFLAGS) -o fbcc $(LIBS)
 
 fbsym.o: fbsym.c fbcc.h
 
@@ -21,12 +22,21 @@ fbgen.o: fbgen.c fbcc.h
 
 fbconst.o: fbconst.c fbcc.h
 
-lex.yy.c: fblex.l fbcc.h
-	flex fblex.l
+fbcc_lex.yy.c: fbcc_lex.l fbcc.h
+	flex -o fbcc_lex.yy.c fbcc_lex.l
 
-fbparse.c: lex.yy.c fbparse.y fbcc.h
+fbparse.c: fbcc_lex.yy.c fbparse.y fbcc.h
 	bison -o fbparse.c fbparse.y
 
+fileops.o: fileops.o compiler.h config.h 
+
 .c.o:
-	gcc	$(CFLAGS) -c $*.c
+	riscv32-unknown-linux-gnu-gcc $(CFLAGS) -c $*.c
+
+fbas.o: fbas.y fbas_lex.yy.c
+	bison -l --name-prefix=as_yy -o fbas.c fbas.y
+	riscv32-unknown-linux-gnu-gcc -c $(CFLAGS) fbas.c -o fbas.o
+
+fbas_lex.yy.c: fbas_lex.l
+	flex -L -o fbas_lex.yy.c fbas_lex.l
 
