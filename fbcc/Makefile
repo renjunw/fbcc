@@ -5,7 +5,7 @@ LFLAGS	=
 all: fbcc
 
 clean:
-	rm -f *.o *.i *.s *~ fbcc fbcc_lex.yy.c fbparse.c fbas.c fbas_lex.yy.c fbas
+	rm -f *.o *.i *.s *~ fbcc fbcc_lex.yy.c fbparse.c fbas.o
 
 FBCC_OBJS = fblist.o fbgen.o fbtype.o fbconst.o fberror.o fbsym.o fbparse.o fileops.o fbas.o fbcc.o
 
@@ -28,7 +28,7 @@ fbcc_lex.yy.c: fbcc_lex.l fbcc.h
 fbparse.c: fbcc_lex.yy.c fbparse.y fbcc.h
 	bison -o fbparse.c fbparse.y
 
-fileops.o: fileops.o compiler.h config.h 
+fileops.o: fileops.c compiler.h config.h 
 
 .c.o:
 	riscv32-unknown-linux-gnu-gcc $(CFLAGS) -c $*.c
