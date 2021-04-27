@@ -36,3 +36,5 @@ fileops.o: fileops.c compiler.h config.h
 fbas.o: fbas.c
 	riscv32-unknown-linux-gnu-gcc -c $(CFLAGS) fbas.c -o fbas.o
 
+fbas: fbas.c
+	riscv32-unknown-linux-gnu-gcc $(CFLAGS) fbas.c -o fbas
