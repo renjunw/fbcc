@@ -1,22 +1,16 @@
 OBJS = fbvm.o
-CFLAGS = -g -Wall -O2 -m32
+CFLAGS = -g -Wall -O2
 LIBS =
-LFLAGS	= -m32
+LFLAGS	= 
 
 all: fbvm
 
 clean:
 	rm -f *.o *~ fbvm fbvmspec.h
 
-# Use the i386 version by default
-fbvmspec.h: fbvmspec_i386.h
-	cp fbvmspec_i386.h fbvmspec.h
-
-fbvm.o: fbvm.c fbvmspec.h fbvminstr.h
-
 fbvm: $(OBJS)
-	gcc -g $(OBJS) $(LFLAGS) -o fbvm $(LIBS)
+	riscv32-unknown-linux-gnu-gcc -static -g $(OBJS) $(LFLAGS) -o fbvm $(LIBS)
 
 .c.o:
-	gcc	$(CFLAGS) -c $*.c
+	riscv32-unknown-linux-gnu-gcc -static $(CFLAGS) -c $*.c
 

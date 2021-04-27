@@ -24,8 +24,200 @@
  */
 #include <stdlib.h>
 #include <stdio.h>
-#include "fbvmspec.h"
-#include "fbvminstr.h"
+
+
+/* Types de base de la machine
+
+   b  = signed 8 bits
+   ub = unsigned 8 bits
+   w  = signed 16 bits
+   uw = unsigned 16 bits
+   i  = signed 32 bits
+   ui = unsigned 32 bits
+
+   p  = pointer (32 bits) 
+ */   
+
+/* nom de l'architecture */
+#define VM_ARCH_NAME "riscv32"
+
+
+/* taille des types (sert aussi pour l'alignement) */
+#define VM_CHAR_SIZE    1
+#define VM_SHORT_SIZE   2
+#define VM_INT_SIZE     4
+#define VM_POINTER_SIZE 4
+
+/* taille minimum d'un élément mis sur la pile */
+#define VM_STACK_ALIGN  4
+
+/* alignement des segments */
+#define VM_SEG_ALIGN  16
+
+/* Endianité */
+#define VM_LITTLE_ENDIAN 1
+
+/* modèle de pile de la machine virtuelle */
+#define VM_LOCAL_START        4
+#define VM_LOCAL_PARAM_END    -8
+
+/* instructions */
+
+enum {
+    ld_b=1,
+    ld_ub,
+    ld_w,
+    ld_uw,
+    ld_i,
+
+    st_b,
+    st_w,
+    st_i,
+
+    add_i,
+    sub_i,
+    mul_i,
+    div_i,
+    div_ui,
+    mod_i,
+    mod_ui,
+    neg_i,
+
+    cmplt_i,
+    cmple_i,
+    cmpge_i,
+    cmpgt_i,
+    cmpeq_i,
+    cmpne_i,
+
+    cmplt_ui,
+    cmple_ui,
+    cmpge_ui,
+    cmpgt_ui,
+
+    and_i,
+    or_i,
+    xor_i,
+    not_i,
+    shl_i,
+    shr_i,
+    shr_ui,
+
+    /* conversions */
+    cvt_i_b,
+    cvt_i_ub,
+    cvt_i_w,
+    cvt_i_uw,
+
+    cvt_b_i,
+    cvt_w_i,
+
+
+    li_i,
+    libp_i,
+
+    /* sauts conditionnels */
+    jeq_i,
+    jne_i,
+    switch_i,
+
+    /* sauts */
+    jmp,
+
+    /* appel de fonctions */
+    jsr,
+    rts,
+
+    /* gestion de la pile */
+    op_dup,
+    pop,
+    addsp,
+
+    /* appel de fonctions externes */
+    libcall,
+};
+
+#define FBVM_MAGIC (('A' << 24)|('V' << 16)|('V' << 8)|'M')
+
+
+char *vm_instr_str[]=
+{
+    "zero",
+    "ld_b", 
+    "ld_ub",
+    "ld_w",
+    "ld_uw",
+    "ld_i",
+
+    "st_b",
+    "st_w",
+    "st_i",
+
+    "add_i",
+    "sub_i",
+    "mul_i",
+    "div_i",
+    "div_ui",
+    "mod_i",
+    "mod_ui",
+    "neg_i",
+
+    "cmplt_i",
+    "cmple_i",
+    "cmpge_i",
+    "cmpgt_i",
+    "cmpeq_i",
+    "cmpne_i",
+
+    "cmplt_ui",
+    "cmple_ui",
+    "cmpge_ui",
+    "cmpgt_ui",
+
+    "and_i",
+    "or_i",
+    "xor_i",
+    "not_i",
+    "shl_i",
+    "shr_i",
+    "shr_ui",
+
+    /* conversions */
+    "cvt_i_b",
+    "cvt_i_ub",
+    "cvt_i_w",
+    "cvt_i_uw",
+
+    "cvt_b_i",
+    "cvt_w_i",
+
+
+    "li_i",
+    "libp_i",
+
+    /* sauts conditionnels */
+    "jeq_i",
+    "jne_i",
+    "switch_i",
+
+    /* sauts */
+    "jmp",
+
+    /* appel de fonctions */
+    "jsr",
+    "rts",
+
+    /* gestion de la pile */
+    "dup",
+    "pop",
+    "addsp",
+
+    "libcall",
+    NULL,
+};
+
+
+
 
 /* #define DEBUG */
 
@@ -38,30 +230,30 @@ typedef int VMStackData;
 
 static void mput_i(unsigned char *p,unsigned int a)
 {
-	 p[0]=a >> 24;
-	 p[1]=a >> 16;
-	 p[2]=a >> 8;
-	 p[3]=a;
+    p[0]=a >> 24;
+    p[1]=a >> 16;
+    p[2]=a >> 8;
+    p[3]=a;
 }
 
 static int mget_i(unsigned char *p)
 {
-	 return (p[0]<<24) + (p[1]<<16) + (p[2]<<8) + (p[3]);
+    return (p[0]<<24) + (p[1]<<16) + (p[2]<<8) + (p[3]);
 }
 
 #else 
 
 static void mput_i(unsigned char *p,unsigned int a)
 {
-	 p[3]=a >> 24;
-	 p[2]=a >> 16;
-	 p[1]=a >> 8;
-	 p[0]=a;
+    p[3]=a >> 24;
+    p[2]=a >> 16;
+    p[1]=a >> 8;
+    p[0]=a;
 }
 
 static int mget_i(unsigned char *p)
 {
-	 return (p[3]<<24) + (p[2]<<16) + (p[1]<<8) + (p[0]);
+    return (p[3]<<24) + (p[2]<<16) + (p[1]<<8) + (p[0]);
 }
 
 #endif
@@ -72,372 +264,372 @@ char **vm_argv;
 
 void VMLibCall(int *sp,int *bp,int c)
 {
-	 int a;
-	 int *p;
+    int a;
+    int *p;
 
-	 switch(c) {
-		case 0:
-			/* getvars */
-			p=(void *)bp[-3];
-			p[0]=(int)stdin;
-			p[1]=(int)stdout;
-			p[2]=(int)stderr;
-			p[3]=vm_argc;
-			p[4]=(int)vm_argv;
-			sp[0]=0;
-			break;
-		case 1:
-			/* malloc */
-			sp[0]=(int)malloc(bp[-3]);
-			break;
-		case 2:
-			/* free */
-			free((void *)bp[-3]);
-			sp[0]=0;
-			break;
-		case 3:
-			/* exit */
-			exit(bp[-3]);
-			break;
-		case 4:
-			/* realloc */
-			p=(void *)bp[-3];
-			a=bp[-4];
-			sp[0]=(int) realloc(p,a);
-			break;
-		case 5:
-			/* fputc */
-			sp[0]=fputc(bp[-3],(FILE *)bp[-4]);
-			break;
-		case 6:
-			/* fgetc */
-			sp[0]=fgetc((FILE *)bp[-3]);
-			break;
-		case 7:
-			/* fread */
-			sp[0]=fread((void *)bp[-3],bp[-4],bp[-5],(FILE *)bp[-6]);
-			break;
-		case 8:
-			/* fwrite */
-			sp[0]=fwrite((void *)bp[-3],bp[-4],bp[-5],(FILE *)bp[-6]);
-			break;
-		case 9:
-			/* ferror */
-			sp[0]=ferror((FILE *)bp[-3]);
-			break;
-		case 10:
-			/* fopen */
-			sp[0]=(int)fopen((char *)bp[-3],(char *)bp[-4]);
-			break;
-		case 11:
-			/* fclose */
-			sp[0]=fclose((FILE *)bp[-3]);
-			break;
-		default:
-			fprintf(stderr,"libcall %d non implémenté\n",c);
-			break;
-	 }
+    switch(c) {
+        case 0:
+            /* getvars */
+            p=(void *)bp[-3];
+            p[0]=(int)stdin;
+            p[1]=(int)stdout;
+            p[2]=(int)stderr;
+            p[3]=vm_argc;
+            p[4]=(int)vm_argv;
+            sp[0]=0;
+            break;
+        case 1:
+            /* malloc */
+            sp[0]=(int)malloc(bp[-3]);
+            break;
+        case 2:
+            /* free */
+            free((void *)bp[-3]);
+            sp[0]=0;
+            break;
+        case 3:
+            /* exit */
+            exit(bp[-3]);
+            break;
+        case 4:
+            /* realloc */
+            p=(void *)bp[-3];
+            a=bp[-4];
+            sp[0]=(int) realloc(p,a);
+            break;
+        case 5:
+            /* fputc */
+            sp[0]=fputc(bp[-3],(FILE *)bp[-4]);
+            break;
+        case 6:
+            /* fgetc */
+            sp[0]=fgetc((FILE *)bp[-3]);
+            break;
+        case 7:
+            /* fread */
+            sp[0]=fread((void *)bp[-3],bp[-4],bp[-5],(FILE *)bp[-6]);
+            break;
+        case 8:
+            /* fwrite */
+            sp[0]=fwrite((void *)bp[-3],bp[-4],bp[-5],(FILE *)bp[-6]);
+            break;
+        case 9:
+            /* ferror */
+            sp[0]=ferror((FILE *)bp[-3]);
+            break;
+        case 10:
+            /* fopen */
+            sp[0]=(int)fopen((char *)bp[-3],(char *)bp[-4]);
+            break;
+        case 11:
+            /* fclose */
+            sp[0]=fclose((FILE *)bp[-3]);
+            break;
+        default:
+            fprintf(stderr,"libcall %d non implémenté\n",c);
+            break;
+    }
 }
 
 
 
 void VMExec(VMCodeData *init_ip,VMStackData *init_sp)
 {
-	 register VMCodeData *ip;
-	 register int *sp;
-	 int *bp;
-	 int op_code;
-	 VMCodeData *ip1;
-	 int a,b;
-	 
-	 ip=init_ip;
-	 sp=init_sp;
-	 bp=init_sp;
-	 
-	 while (1) {
-			op_code=*ip++;
+    register VMCodeData *ip;
+    register int *sp;
+    int *bp;
+    int op_code;
+    VMCodeData *ip1;
+    int a,b;
+
+    ip=init_ip;
+    sp=init_sp;
+    bp=init_sp;
+
+    while (1) {
+        op_code=*ip++;
 #ifdef DEBUG
-			fprintf(stderr,"debug: sp=%d bp=%d sp[0]=%d %s\n",
-							sp-init_sp,bp-init_sp,sp[0],vm_instr_str[op_code]);
+        fprintf(stderr,"debug: sp=%d bp=%d sp[0]=%d %s\n",
+                sp-init_sp,bp-init_sp,sp[0],vm_instr_str[op_code]);
 #endif
-			switch(op_code) {
-				 /* memory read */
-			 case ld_b:
-				 sp[0]=*((char *)sp[0]);
-				 break;
-			 case ld_ub:
-				 sp[0]=*((unsigned char *)sp[0]);
-				 break;
-			 case ld_w:
-				 sp[0]=*((short *)sp[0]);
-				 break;
-			 case ld_uw:
-				 sp[0]=*((unsigned short *)sp[0]);
-				 break;
-			 case ld_i:
-				 sp[0]=*((int *)sp[0]);
-				 break;
-				 
-				 /* memory write */
-			 case st_i:
-				 *((int *)sp[0])=sp[-1];
-				 sp--;
-				 break;
-			 case st_w:
-				 *((short *)sp[0])=sp[-1];
-				 sp--;
-				 break;
-			 case st_b:
-				 *((char *)sp[0])=sp[-1];
-				 sp--;
-				 break;
-				 
-				 /* load immediate pointers */
-			 case libp_i:
-				 sp++;
-				 sp[0]=(int)bp + mget_i(ip);
-				 ip+=4;
-				 break;
+        switch(op_code) {
+            /* memory read */
+            case ld_b:
+                sp[0]=*((char *)sp[0]);
+                break;
+            case ld_ub:
+                sp[0]=*((unsigned char *)sp[0]);
+                break;
+            case ld_w:
+                sp[0]=*((short *)sp[0]);
+                break;
+            case ld_uw:
+                sp[0]=*((unsigned short *)sp[0]);
+                break;
+            case ld_i:
+                sp[0]=*((int *)sp[0]);
+                break;
 
-				 /* load immediate data */
-			 case li_i:
-				 sp++;
-				 sp[0]=mget_i(ip);
-				 ip+=4;
-				 break;
+                /* memory write */
+            case st_i:
+                *((int *)sp[0])=sp[-1];
+                sp--;
+                break;
+            case st_w:
+                *((short *)sp[0])=sp[-1];
+                sp--;
+                break;
+            case st_b:
+                *((char *)sp[0])=sp[-1];
+                sp--;
+                break;
 
-				 /* arithmétique */
-			 case add_i:
-				 sp[-1]+=sp[0];
-				 sp--;
-				 break;
-			 case sub_i:
-				 sp[-1]-=sp[0];
-				 sp--;
-				 break;
-			 case mul_i:
-				 sp[-1]*=sp[0];
-				 sp--;
-				 break;
-			 case div_i:
-				 sp[-1]/=sp[0];
-				 sp--;
-				 break;
-			 case mod_i:
-				 sp[-1]%=sp[0];
-				 sp--;
-				 break;
-			 case div_ui:
-				 sp[-1] = (unsigned int)sp[-1] / (unsigned int)sp[0];
-				 sp--;
-				 break;
-			 case mod_ui:
-				 sp[-1] = (unsigned int)sp[-1] % (unsigned int)sp[0];
-				 sp--;
-				 break;
-			 case neg_i:
-				 sp[0]=-sp[0];
-				 break;
+                /* load immediate pointers */
+            case libp_i:
+                sp++;
+                sp[0]=(int)bp + mget_i(ip);
+                ip+=4;
+                break;
 
-				 /* opérations logiques */
-			 case and_i:
-				 sp[-1]&=sp[0];
-				 sp--;
-				 break;
-			 case or_i:
-				 sp[-1]|=sp[0];
-				 sp--;
-				 break;
-			 case xor_i:
-				 sp[-1]^=sp[0];
-				 sp--;
-				 break;
-			 case not_i:
-				 sp[0]=~sp[0];
-				 break;
-			 case shl_i:
-				 sp[-1]<<=sp[0];
-				 sp--;
-				 break;
-			 case shr_i:
-				 sp[-1]>>=sp[0];
-				 sp--;
-				 break;
-			 case shr_ui:
-                                 sp[-1] = (unsigned int)sp[-1] >> sp[0];
-				 sp--;
-				 break;
-				 
-				 /* conversions */
-			 case cvt_i_b:
-				 sp[0]=(char)sp[0];
-				 break;
-			 case cvt_b_i:
-			 case cvt_i_ub:
-				 sp[0]=(unsigned char)sp[0];
-				 break;
-			 case cvt_i_w:
-				 sp[0]=(short)sp[0];
-				 break;
-			 case cvt_w_i:
-			 case cvt_i_uw:
-				 sp[0]=(unsigned short)sp[0];
-				 break;
-				 
-				 
-				 
-				 /* tests */
-			 case cmplt_i:
-				 sp[-1]=sp[-1] < sp[0];
-				 sp--;
-				 break;
-			 case cmple_i:
-				 sp[-1]=sp[-1] <= sp[0];
-				 sp--;
-				 break;
-			 case cmpgt_i:
-				 sp[-1]=sp[-1] > sp[0];
-				 sp--;
-				 break;
-			 case cmpge_i:
-				 sp[-1]=sp[-1] >= sp[0];
-				 sp--;
-				 break;
+                /* load immediate data */
+            case li_i:
+                sp++;
+                sp[0]=mget_i(ip);
+                ip+=4;
+                break;
 
-			 case cmplt_ui:
-				 sp[-1]=(unsigned int)sp[-1] < (unsigned int)sp[0];
-				 sp--;
-				 break;
-			 case cmple_ui:
-				 sp[-1]=(unsigned int)sp[-1] <= (unsigned int)sp[0];
-				 sp--;
-				 break;
-			 case cmpgt_ui:
-				 sp[-1]=(unsigned int)sp[-1] > (unsigned int)sp[0];
-				 sp--;
-				 break;
-			 case cmpge_ui:
-				 sp[-1]=(unsigned int)sp[-1] >= (unsigned int)sp[0];
-				 sp--;
-				 break;
-			 
-			 case cmpeq_i:
-				 sp[-1]=sp[-1] == sp[0];
-				 sp--;
-				 break;
-			 case cmpne_i:
-				 sp[-1]=sp[-1] != sp[0];
-				 sp--;
-				 break;
-				 
+                /* arithmétique */
+            case add_i:
+                sp[-1]+=sp[0];
+                sp--;
+                break;
+            case sub_i:
+                sp[-1]-=sp[0];
+                sp--;
+                break;
+            case mul_i:
+                sp[-1]*=sp[0];
+                sp--;
+                break;
+            case div_i:
+                sp[-1]/=sp[0];
+                sp--;
+                break;
+            case mod_i:
+                sp[-1]%=sp[0];
+                sp--;
+                break;
+            case div_ui:
+                sp[-1] = (unsigned int)sp[-1] / (unsigned int)sp[0];
+                sp--;
+                break;
+            case mod_ui:
+                sp[-1] = (unsigned int)sp[-1] % (unsigned int)sp[0];
+                sp--;
+                break;
+            case neg_i:
+                sp[0]=-sp[0];
+                break;
 
-				 /* subroutines */
-			 case jsr:
-				 a=mget_i(ip);
-				 ip+=4;
-				 ip1=(void *)sp[0];
-				 sp[0]=(int)ip;
-				 sp[1]=(int)bp;
-				 sp[2]=a;
-				 sp+=2;
-				 ip=ip1;
-				 bp=sp;
-				 break;
+                /* opérations logiques */
+            case and_i:
+                sp[-1]&=sp[0];
+                sp--;
+                break;
+            case or_i:
+                sp[-1]|=sp[0];
+                sp--;
+                break;
+            case xor_i:
+                sp[-1]^=sp[0];
+                sp--;
+                break;
+            case not_i:
+                sp[0]=~sp[0];
+                break;
+            case shl_i:
+                sp[-1]<<=sp[0];
+                sp--;
+                break;
+            case shr_i:
+                sp[-1]>>=sp[0];
+                sp--;
+                break;
+            case shr_ui:
+                sp[-1] = (unsigned int)sp[-1] >> sp[0];
+                sp--;
+                break;
 
-			 case rts:
-				 a=sp[0];  /* valeur retournée */
-				 sp=bp;
-				 ip=(void *)sp[-2];
-				 bp=(void *)sp[-1];
-				 b=sp[0];
-				 sp=(int *)((long)sp-(b+8));
-				 sp[0]=a;
-				 break;
+                /* conversions */
+            case cvt_i_b:
+                sp[0]=(char)sp[0];
+                break;
+            case cvt_b_i:
+            case cvt_i_ub:
+                sp[0]=(unsigned char)sp[0];
+                break;
+            case cvt_i_w:
+                sp[0]=(short)sp[0];
+                break;
+            case cvt_w_i:
+            case cvt_i_uw:
+                sp[0]=(unsigned short)sp[0];
+                break;
 
-			 /* jumps */
-			 case jmp:
-				 ip1=(void *)mget_i(ip);
-				 ip=ip1;
-				 break;
-			 
-			 case jeq_i:
-				 ip1=(void *)mget_i(ip);
-				 ip+=4;
-				 if (sp[0]==0) ip=ip1;
-				 sp--;
-				 break;
-			 
-			 case jne_i:
-				 ip1=(void *)mget_i(ip);
-				 ip+=4;
-				 if (sp[0]!=0) ip=ip1;
-				 sp--;
-				 break;
-			 
-				 /* gestion de la pile */
-			 case addsp:
-				 a=mget_i(ip);
-				 ip+=4;
-				 sp=(void *)((int)sp + a);
-				 break;
-				 
-			 case op_dup:
-				 sp++;
-				 sp[0]=sp[-1];
-				 break;
-				 
-			 case pop:
-				 sp--;
-				 break;
-				 
-				 /* appels systeme */
-			 case libcall:
-				 a=mget_i(ip);
-				 ip+=4;
-				 sp++;
-				 VMLibCall(sp,bp,a);
-				 break;
-				 
-				 /* gestion des switchs : inspiré de java :) */
-			 case switch_i:
-				 {
-						int val,count;
-						int *tab,*p,*p_end;
-						
-						val=sp[-1];
-						tab=(int *)sp[0];
-						sp-=2;
-						
-						p=tab;
-						count=*p++;
-						p_end=tab+count;
-						while (p<p_end) {
-							 if (val == *p) {
-									ip=(VMCodeData *) *(p_end+(p-tab));
-									goto switch_end;
-							 }
-							 p++;
-						}
-						ip=(VMCodeData *) *p_end;
-						switch_end:
-						break;
-				 }
-			 default:
-				 fprintf(stderr,"opcode not implemented: %s\n",vm_instr_str[op_code]);
-				 return;
-			}
-	 }
+
+
+                /* tests */
+            case cmplt_i:
+                sp[-1]=sp[-1] < sp[0];
+                sp--;
+                break;
+            case cmple_i:
+                sp[-1]=sp[-1] <= sp[0];
+                sp--;
+                break;
+            case cmpgt_i:
+                sp[-1]=sp[-1] > sp[0];
+                sp--;
+                break;
+            case cmpge_i:
+                sp[-1]=sp[-1] >= sp[0];
+                sp--;
+                break;
+
+            case cmplt_ui:
+                sp[-1]=(unsigned int)sp[-1] < (unsigned int)sp[0];
+                sp--;
+                break;
+            case cmple_ui:
+                sp[-1]=(unsigned int)sp[-1] <= (unsigned int)sp[0];
+                sp--;
+                break;
+            case cmpgt_ui:
+                sp[-1]=(unsigned int)sp[-1] > (unsigned int)sp[0];
+                sp--;
+                break;
+            case cmpge_ui:
+                sp[-1]=(unsigned int)sp[-1] >= (unsigned int)sp[0];
+                sp--;
+                break;
+
+            case cmpeq_i:
+                sp[-1]=sp[-1] == sp[0];
+                sp--;
+                break;
+            case cmpne_i:
+                sp[-1]=sp[-1] != sp[0];
+                sp--;
+                break;
+
+
+                /* subroutines */
+            case jsr:
+                a=mget_i(ip);
+                ip+=4;
+                ip1=(void *)sp[0];
+                sp[0]=(int)ip;
+                sp[1]=(int)bp;
+                sp[2]=a;
+                sp+=2;
+                ip=ip1;
+                bp=sp;
+                break;
+
+            case rts:
+                a=sp[0];  /* valeur retournée */
+                sp=bp;
+                ip=(void *)sp[-2];
+                bp=(void *)sp[-1];
+                b=sp[0];
+                sp=(int *)((long)sp-(b+8));
+                sp[0]=a;
+                break;
+
+                /* jumps */
+            case jmp:
+                ip1=(void *)mget_i(ip);
+                ip=ip1;
+                break;
+
+            case jeq_i:
+                ip1=(void *)mget_i(ip);
+                ip+=4;
+                if (sp[0]==0) ip=ip1;
+                sp--;
+                break;
+
+            case jne_i:
+                ip1=(void *)mget_i(ip);
+                ip+=4;
+                if (sp[0]!=0) ip=ip1;
+                sp--;
+                break;
+
+                /* gestion de la pile */
+            case addsp:
+                a=mget_i(ip);
+                ip+=4;
+                sp=(void *)((int)sp + a);
+                break;
+
+            case op_dup:
+                sp++;
+                sp[0]=sp[-1];
+                break;
+
+            case pop:
+                sp--;
+                break;
+
+                /* appels systeme */
+            case libcall:
+                a=mget_i(ip);
+                ip+=4;
+                sp++;
+                VMLibCall(sp,bp,a);
+                break;
+
+                /* gestion des switchs : inspiré de java :) */
+            case switch_i:
+                {
+                    int val,count;
+                    int *tab,*p,*p_end;
+
+                    val=sp[-1];
+                    tab=(int *)sp[0];
+                    sp-=2;
+
+                    p=tab;
+                    count=*p++;
+                    p_end=tab+count;
+                    while (p<p_end) {
+                        if (val == *p) {
+                            ip=(VMCodeData *) *(p_end+(p-tab));
+                            goto switch_end;
+                        }
+                        p++;
+                    }
+                    ip=(VMCodeData *) *p_end;
+switch_end:
+                    break;
+                }
+            default:
+                fprintf(stderr,"opcode not implemented: %s\n",vm_instr_str[op_code]);
+                return;
+        }
+    }
 }
 
 
 int fget_i(FILE *f)
 {
-	 int a;
-	 a=fgetc(f) << 24;
-	 a|=fgetc(f) << 16;
-	 a|=fgetc(f) << 8;
-	 a|=fgetc(f);
-	 return a;
+    int a;
+    a=fgetc(f) << 24;
+    a|=fgetc(f) << 16;
+    a|=fgetc(f) << 8;
+    a|=fgetc(f);
+    return a;
 }
 
 /*
@@ -446,78 +638,77 @@ int fget_i(FILE *f)
 
 void VMLoadCode(unsigned char **code1,int *stack_size1,char *filename)
 {
-	 FILE *f;
-	 int i,offset,adr,code_size,stack_size,reloc_nb,magic;
-	 unsigned char *code;
-	 
-	 f=fopen(filename,"r");
-	 if (f==NULL) {
-			perror(filename);
-			exit(1);
-	 }
-	 
-	 magic=fget_i(f);
-	 if (magic!=FBVM_MAGIC) {
-			fprintf(stderr,"Bad magic number\n");
-			exit(1);
-	 }
-	 
-	 reloc_nb=fget_i(f);
-	 code_size=fget_i(f);
-	 stack_size=fget_i(f);
-#ifdef DEBUG
-	 fprintf(stderr,
-					 "Code size=%d Stack size=%d Relocations=%d\n",
-					 code_size,stack_size,reloc_nb);
-#endif
-	 code=malloc(code_size);
-	 fread(code,code_size,1,f);
-	 
-	 /* relocation */
-	 for(i=0;i<reloc_nb;i++) {
-			offset=fget_i(f);
-			adr=mget_i(code+offset);
-			adr+=(int)(code);
-			mput_i(code+offset,adr);
-	 }
-	 
-	 fclose(f);
-	 
-	 *code1=code;
-	 *stack_size1=stack_size;
+    FILE *f;
+    int i,offset,adr,code_size,stack_size,reloc_nb,magic;
+    unsigned char *code;
+
+    f=fopen(filename,"r");
+    if (f==NULL) {
+        perror(filename);
+        exit(1);
+    }
+
+    magic=fget_i(f);
+    if (magic!=FBVM_MAGIC) {
+        fprintf(stderr,"Bad magic number\n");
+        //exit(1);
+    }
+
+    reloc_nb=fget_i(f);
+    code_size=fget_i(f);
+    stack_size=fget_i(f);
+    //#ifdef DEBUG
+    fprintf(stderr, "Code size=%d Stack size=%d Relocations=%d\n", code_size,stack_size,reloc_nb);
+    //#endif
+    code=malloc(code_size);
+    fread(code,code_size,1,f);
+
+    /* relocation */
+    for(i=0;i<reloc_nb;i++) {
+        offset=fget_i(f);
+        adr=mget_i(code+offset);
+        adr+=(int)(code);
+        mput_i(code+offset,adr);
+    }
+
+    fclose(f);
+
+    *code1=code;
+    *stack_size1=stack_size;
 }
 
 
 void print_help(void)
 {
-  printf("usage: fbvm code_file\n"
-	 "Virtual Machine Interpreter (version 1.00) (c) 1996 Fabrice Bellard\n"
-	 "(compiled for %s)\n"
-	 "\n",VM_ARCH_NAME
-	 );
+    printf("usage: fbvm code_file\n"
+            "Virtual Machine Interpreter (version 1.00) (c) 1996 Fabrice Bellard\n"
+            "(compiled for %s)\n"
+            "\n",VM_ARCH_NAME
+          );
 }
 
 int main(int argc,char *argv[])
 {
-	 VMData *code;
-	 VMStackData *stack;
-	 int stack_size;
-	 
-	 if (argc < 2) {
-			print_help();
-			exit(0);
-	 }
+    VMData *code;
+    VMStackData *stack;
+    int stack_size;
 
-	 VMLoadCode(&code,&stack_size,argv[1]);
-	 stack=malloc(stack_size);
+    if (argc < 2) {
+        print_help();
+        exit(0);
+    }
 
-	 vm_argc=argc-1;
-	 vm_argv=argv+1;
+    VMLoadCode(&code, &stack_size, argv[1]);
+    stack=malloc(stack_size);
 
-	 VMExec(code,stack);
+    vm_argc=argc-1;
+    vm_argv=argv+1;
 
-	 free(code);
-	 free(stack);
+    VMExec(code,stack);
 
-	 return 0;
+    free(code);
+    free(stack);
+
+    return 0;
 }
+
