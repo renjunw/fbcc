@@ -316,6 +316,11 @@ int main(int argc,char *argv[])
     char* ecb = argv[3];
     char* hex = argv[4];
     unsigned stack_size = 64 * 1024; //use default value.
+    FILE* temp_asfile = NULL;
+    FILE* temp_fd = NULL;
+    char buffer[4096] = {0};
+    char buffer2[4096] = {0};
+    char* assembler_in = "temp_all_in_one_file.s";
 
     //printf(cc_lib_str);
 
@@ -358,18 +363,54 @@ int main(int argc,char *argv[])
     /*	 printf("\n");
          Sym_Print(); */
 
-    if(ccin)
+    fclose(ccin);
+    fclose(ccout);
+
+    temp_fd = fopen("lib.s", "rb");
+    if(!temp_fd)
     {
-        fclose(ccin);
-        ccin = NULL;
-    }
-    if(ccout)
-    {
-        fclose(ccout);
-        ccout = NULL;
+        fprintf(stderr, "Can't create file lib.s\n");
+        return ERR_ARGUMENT;
     }
 
-    //as_assembler(asfile, ecb, stack_size, 0);
+
+    temp_asfile = fopen("temp_all_in_one_file.s", "wb+");
+    if(!temp_asfile)
+    {
+        fprintf(stderr, "Can't create file temp_all_in_one_file\n");
+        return ERR_ARGUMENT;
+    }
+
+    while(fread(buffer, 1, 1, temp_fd)){
+        fwrite(buffer, 1, 1, temp_asfile);
+    }
+    
+    fclose(temp_fd);
+    fclose(temp_asfile);
+
+    temp_fd = fopen(asfile, "rb");
+    if(!temp_fd)
+    {
+        fprintf(stderr, "Can't create file %s\r\n", asfile);
+        return ERR_ARGUMENT;
+    }
+
+    temp_asfile = fopen("temp_all_in_one_file.s", "ab+");
+    if(!temp_asfile)
+    {
+        fprintf(stderr, "Can't create file temp_all_in_one_file\n");
+        return ERR_ARGUMENT;
+    }
+
+    while(fread(buffer2, 1, 1, temp_fd)){
+        fwrite(buffer2, 1, 1, temp_asfile);
+    }
+
+    fclose(temp_fd);
+    fclose(temp_asfile);
+
+    as_assembler(assembler_in, ecb, stack_size, 0);
+    
     //as_hexdump(ecb, hex);
 
     return 0;
