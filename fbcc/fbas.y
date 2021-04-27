@@ -41,8 +41,8 @@
 #include <string.h>
 #include <getopt.h>
 
-#include <fbvmspec.h>
-#include <fbvminstr.h>
+#include "fbvmspec.h"
+#include "fbvminstr.h"
 
 /* parsing */
 
@@ -51,7 +51,7 @@
 	 
 int lex_linenum;
 	 
-void yyerror(char *format,...);
+void as_yyerror(char *format,...);
 int yylex(void);	 
 
 /* gestion des segments */
@@ -197,7 +197,7 @@ instruction:
 	 /* marquage d'un symbole en global */
 	 SYM_ENT *s;
 	 s=Hash_Search($2.lex_ident);
-	 if (s==NULL) yyerror("Symbole '%s' non défini",$2.lex_ident);
+	 if (s==NULL) as_yyerror("Symbole '%s' non défini",$2.lex_ident);
 	 s->sym_type=SYM_EXPORTED;
 	 free($2.lex_ident);
 }
@@ -235,7 +235,7 @@ expr_int:
 							
 %%
 
-#include "lex.yy.c"
+#include "fbas_lex.yy.c"
 
 
 /*
@@ -313,7 +313,7 @@ void Sym_Declare(char *name,int seg,int val)
 	 SYM_ENT *s;
 	 s=Hash_Search(name);
 	 if (s!=NULL) {
-			if (s->sym_type!=SYM_IMPORTED) yyerror("Redéfinition de '%s'",name);
+			if (s->sym_type!=SYM_IMPORTED) as_yyerror("Redéfinition de '%s'",name);
 			s->sym_type=SYM_PRIVATE;
 	 } else {
 			s=Hash_New(name,SYM_PRIVATE);
@@ -460,7 +460,7 @@ void Seg_ExecWrite(char *filename,int stack_size)
 			s=hash_tab[i];
 			while (s!=NULL) {
 				 if (s->sym_type == SYM_IMPORTED) 
-					 yyerror("Symbole '%s' non résolu",s->name);
+					 as_yyerror("Symbole '%s' non résolu",s->name);
 				 ent=s->reloc_first;
 				 while (ent!=NULL) {
 						if (s->seg!=SEG_CONST) reloc_nb++;
@@ -512,7 +512,7 @@ void Seg_ExecWrite(char *filename,int stack_size)
 }
 
 
-void Sym_Print(int type)
+void As_Sym_Print(int type)
 {
 	 int i;
 	 SYM_ENT *s;
@@ -547,17 +547,17 @@ void Seg_Verbose(void)
 			printf("Segment %d: size=%d\n",i,seg_offset[i]);
 	 }
 	 printf("\nPrivate Symbols:\n");
-	 Sym_Print(SYM_PRIVATE);
+	 As_Sym_Print(SYM_PRIVATE);
 	 printf("\nExported Symbols:\n");
-	 Sym_Print(SYM_EXPORTED);
+	 As_Sym_Print(SYM_EXPORTED);
 	 printf("\nImported Symbols:\n");
-	 Sym_Print(SYM_IMPORTED);
+	 As_Sym_Print(SYM_IMPORTED);
 }
 
 
 /* présentation :) */	 
 	 
-void yyerror(char *format,...)
+void as_yyerror(char *format,...)
 {
 	 va_list ap;
 	 
@@ -580,13 +580,13 @@ void print_help(void)
 					);
 }
 
-int main(int argc,char *argv[])
+int as_assembler(int argc, char *argv[])
 {
 	 int c;
 	 char obj_filename[PATH_SIZE];
 	 int verbose,stack_size;
 	 
-	 strcpy(obj_filename,"fba.out");
+	 strcpy(obj_filename, "fba.out");
 	 verbose=0;
 	 stack_size=64 * 1024;
 	 
@@ -600,7 +600,7 @@ int main(int argc,char *argv[])
 				 exit(0);
 				 break;
 			 case 'o':
-				 strcpy(obj_filename,optarg);
+				 strcpy(obj_filename, optarg);
 				 break;
 			 case 'v':
 				 verbose=1;
@@ -619,7 +619,7 @@ int main(int argc,char *argv[])
 	 
 	 if (verbose) Seg_Verbose();
 	 
-	 Seg_ExecWrite(obj_filename,stack_size);
+	 Seg_ExecWrite(obj_filename, stack_size);
 
 	 return 0;
 }

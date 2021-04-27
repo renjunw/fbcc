@@ -1,3 +1,4 @@
+%option prefix="as_yy"
 %{
 #define YY_ALWAYS_INTERACTIVE 1
 %}
@@ -19,7 +20,7 @@ ident [a-zA-Z_@][a-zA-Z_0-9@]*
 
 
 "\n"  { lex_linenum++; }
-{delim} /* rien du tout */
+{delim} /* Nothing there? */
 	 
 ".text"    { return sym_text; }
 ".data"    { return sym_data; }
@@ -53,7 +54,7 @@ ident [a-zA-Z_@][a-zA-Z_0-9@]*
 }
 
 {ident} {
-	 /* recherche si c'est une instruction assembleur */
+	 /* Find out if it is an assembler statement */
 	 char **p;
 	 int c;
 	 p=vm_instr_str;
@@ -89,7 +90,7 @@ ident [a-zA-Z_@][a-zA-Z_0-9@]*
 ":" { return ':'; }
 "," { return ','; }
 
-. { yyerror("Caractère non reconnu"); }
+. { yyerror("Unrecognized character"); }
 
 %%
 	
